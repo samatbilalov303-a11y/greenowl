@@ -13,7 +13,7 @@ load_dotenv()
 # ============================================================
 # ВСТАВЬ СВОЙ КЛЮЧ GIGACHAT (ОБЯЗАТЕЛЬНО ПЕРЕВЫПУСТИ ЕГО!)
 # ============================================================
-HARDCODED_KEY = "MDFhMWM2MTAtNjU3NS03MGU1LWFiMjUtNTY5MmMxZGYwODM1OmY1YzEwNjcyLWE4YmQtNGVjNS1iODUwLTNjNjY1ODlmZTg3Mg=="
+HARDCODED_KEY = "MDFhMWM2MTAtNjU3NS03MGU1LWFiMjUtNTY5MmMxZGYwODM1OmI2MGY1YTc0LTc5MTUtNDM0OS05NmNkLTlhMTRjZjJkY2JjMg=="
 # ============================================================
 
 app = Flask(__name__)
