@@ -14,7 +14,7 @@ load_dotenv()
 HARDCODED_KEY = "MDFhMWM2MTAtNjU3NS03MGU1LWFiMjUtNTY5MmMxZGYwODM1OmJjOTg3ZTljLWJjYjQtNDljMS1hODk5LWU3NDJkZTE1YjNiYw=="
 app = Flask(__name__)
 app.secret_key = "greenowl_secret_key_2026"
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///greenowl.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/greenowl.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
