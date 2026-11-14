@@ -11,7 +11,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ТВОЙ КЛЮЧ (ОБЯЗАТЕЛЬНО ПЕРЕВЫПУСТИ ЕГО ПОСЛЕ ЭТОГО!)
-HARDCODED_KEY = os.environ.get("MDFhMWM2MTAtNjU3NS03MGU1LWFiMjUtNTY5MmMxZGYwODM1Ojc0NWY3YmUzLTMxYzMtNDRmYS1hZWMxLTRhYTAxNGM2YWYyYQ==", "")
+HARDCODED_KEY = "MDFhMWM2MTAtNjU3NS03MGU1LWFiMjUtNTY5MmMxZGYwODM1OmJjOTg3ZTljLWJjYjQtNDljMS1hODk5LWU3NDJkZTE1YjNiYw=="
 app = Flask(__name__)
 app.secret_key = "greenowl_secret_key_2026"
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///greenowl.db'
