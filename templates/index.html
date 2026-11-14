@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GreenOwl AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.0/dist/confetti.browser.min.js"></script>
+    <script>
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+    </script>
+</head>
+<body>
+<div class="bg-blob blob-1"></div>
+<div class="bg-blob blob-2"></div>
+<div class="bg-blob blob-3"></div>
+
+<div id="reg" class="register-overlay">
+    <div class="register-box">
+        <h2>🦉 Добро пожаловать!</h2>
+        <p id="regMessage">Введи имя для таблицы лидеров:</p>
+        <input type="text" id="nameInput" placeholder="Твоё имя" maxlength="15">
+        <button onclick="saveName()">Начать</button>
+    </div>
+</div>
+
+<header class="header">
+    <h1>🦉 GreenOwl AI</h1>
+    <div class="header-controls">
+        <div class="user-info">
+            <span id="userLevel">Ур. 1</span>
+            <span id="userExp">✨ 0</span>
+            <span id="userCoins">💰 100</span>
+        </div>
+        <button class="theme-toggle" onclick="toggleTheme()" id="themeBtn">🌙</button>
+        <button class="logout-btn" onclick="logout()" style="display:none;" id="logoutBtn">Выйти</button>
+    </div>
+</header>
+
+<div class="tabs">
+    <button class="tab active" onclick="switchTab('chat', event)">📖 Словарь</button>
+    <button class="tab" onclick="switchTab('game', event)">🎮 Слова</button>
+    <button class="tab" onclick="switchTab('sentence', event)">✍️ Предложения</button>
+    <button class="tab" onclick="switchTab('phrases', event)">💬 Фразы</button>
+    <button class="tab" onclick="switchTab('pass', event)">🏆 GreenOwl Pass</button>
+    <button class="tab" onclick="switchTab('shop', event)">🎁 Подарки</button>
+    <button class="tab" onclick="switchTab('leaders', event)">🥇 Лидеры</button>
+</div>
+
+<div id="app" class="container" style="display:none;">
+    
+    <div id="chat-tab" class="tab-content active">
+        <h2>📖 ИИ-Словарь</h2>
+        <div class="chat-box">
+            <input type="text" id="userInput" placeholder="Например: milk">
+            <button onclick="sendMessage()">Перевести</button>
+        </div>
+        <div id="responseArea" class="response-area">Здесь появится перевод...</div>
+    </div>
+
+    <div id="game-tab" class="tab-content">
+        <div class="topic-selector">
+            <select id="topicSelect">
+                <option value="general">🌍 Общее</option>
+                <option value="food">🍕 Еда</option>
+                <option value="animals">🐶 Животные</option>
+            </select>
+            <select id="diffSelect">
+                <option value="easy">🌱 Легко</option>
+                <option value="medium">🌿 Средне</option>
+                <option value="hard">🔥 Сложно</option>
+            </select>
+        </div>
+        <div id="gameArea" class="game-area">
+            <button onclick="startGame()">Начать игру</button>
+        </div>
+    </div>
+
+    <div id="sentence-tab" class="tab-content">
+        <h2>✍️ Собери предложение</h2>
+        <div id="sentenceArea" class="sentence-game">
+            <button onclick="startSentence()">Начать</button>
+        </div>
+    </div>
+
+    <div id="phrases-tab" class="tab-content">
+        <h2>💬 Полезные фразы</h2>
+        <div id="phrasesArea" style="margin-top: 30px;">
+            <button onclick="startPhrases()">Показать фразу</button>
+        </div>
+    </div>
+
+    <div id="pass-tab" class="tab-content">
+        <h2>🏆 GreenOwl Pass</h2>
+        <div id="passArea" class="pass-grid"></div>
+    </div>
+
+    <div id="shop-tab" class="tab-content">
+        <h2>🎁 Подарки</h2>
+        <div class="nft-grid" id="nftGrid"></div>
+    </div>
+
+    <div id="leaders-tab" class="tab-content">
+        <h2>🥇 Топ игроков</h2>
+        <div id="leaderArea" class="stats-area"></div>
+    </div>
+</div>
+
+<script>
+window.onload = function() {
+    updateThemeIcon();
+    fetch('/check_auth').then(r => r.json()).then(d => {
+        if (d.auth) {
+            document.getElementById('reg').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
+            document.getElementById('logoutBtn').style.display = 'block';
+            updateStats(); renderShop();
+        }
+    });
+};
+
+function saveName() {
+    var name = document.getElementById('nameInput').value.trim();
+    if (!name) { alert('Введи имя!'); return; }
+    fetch('/set_name', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({name: name})
+    }).then(r => r.json()).then(d => {
+        if (d.status === 'error') {
+            document.getElementById('regMessage').innerHTML = '<span style="color:red">' + d.message + '</span>';
+        } else {
+            document.getElementById('reg').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
+            document.getElementById('logoutBtn').style.display = 'block';
+            updateStats(); renderShop();
+        }
+    });
+}
+
+function logout() { fetch('/logout', {method: 'POST'}).then(() => { location.reload(); }); }
+function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme');
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('theme', next);
+    updateThemeIcon();
+}
+function updateThemeIcon() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    document.getElementById('themeBtn').textContent = isDark ? '☀️' : '🌙';
+}
+
+function switchTab(name, event) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    event.target.classList.add('active');
+    document.getElementById(name + '-tab').classList.add('active');
+    if (name === 'leaders') loadLeaderboard();
+    if (name === 'pass') renderPass();
+}
+
+function sendMessage() {
+    var input = document.getElementById('userInput');
+    var area = document.getElementById('responseArea');
+    if (!input.value.trim()) return;
+    
+    area.innerHTML = '⏳ Ищу перевод...';
+    
+    fetch('/ask', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({message: input.value})
+    }).then(r => r.json()).then(d => {
+        // Выводим ответ как есть (мы уже добавили HTML-теги <b> и <br> на сервере)
+        area.innerHTML = '<div style="font-size: 20px; line-height: 1.8;">' + d.reply + '</div>';
+    });
+    
+    input.value = '';
+}
+
+
+function startGame() {
+    var topic = document.getElementById('topicSelect').value;
+    var diff = document.getElementById('diffSelect').value;
+    var area = document.getElementById('gameArea');
+    area.innerHTML = '⏳ Загрузка...';
+    
+    fetch('/get_word', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({topic: topic, difficulty: diff})
+    }).then(r => r.json()).then(d => {
+        if (d.error) { area.innerHTML = '<p style="color:red">' + d.error + '</p>'; return; }
+        var html = '<h2>' + d.en + '</h2><div class="options">';
+        d.options.forEach(opt => {
+            // ИСПРАВЛЕНО: Сложность передается прямо в функцию!
+            html += '<button class="answer-btn" onclick="checkAnswer(\'' + opt + '\', \'' + diff + '\')">' + opt + '</button>';
+        });
+        html += '</div>';
+        area.innerHTML = html;
+    });
+}
+
+function checkAnswer(selected, diff) {
+    fetch('/save_progress', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({answer: selected, difficulty: diff})
+    }).then(r => r.json()).then(d => {
+        if (d.correct) {
+            confetti({ particleCount: 80, spread: 60 });
+            alert('✅ Верно! +' + d.earned_exp + ' ✨, +' + d.earned_coins + ' 💰');
+        } else {
+            alert('❌ Неверно. Правильно: ' + d.answer);
+        }
+        updateStats(); startGame();
+    });
+}
+
+var currentSentence = null; var pickedWords = [];
+function startSentence() {
+    fetch('/get_sentence').then(r => r.json()).then(d => {
+        currentSentence = d; pickedWords = [];
+        var area = document.getElementById('sentenceArea');
+        area.innerHTML = '<div class="ru-prompt">Переведи: «' + d.ru + '»</div><div id="pickedArea" class="picked-area">Нажми на слова ниже</div><div id="wordsArea" class="words-pool"></div><button onclick="checkSentence()" style="margin-top:20px;">Проверить</button>';
+        var pool = document.getElementById('wordsArea');
+        d.words.forEach(w => {
+            var btn = document.createElement('button');
+            btn.className = 'word-chip'; btn.textContent = w;
+            btn.onclick = function() { pickedWords.push(w); btn.remove(); document.getElementById('pickedArea').textContent = pickedWords.join(' '); };
+            pool.appendChild(btn);
+        });
+    });
+}
+
+function checkSentence() {
+    fetch('/check_sentence', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({answer: pickedWords, correct: currentSentence.correct})
+    }).then(r => r.json()).then(d => {
+        if (d.correct) {
+            confetti({ particleCount: 100, spread: 70 });
+            alert('✅ Верно! +' + d.earned_exp + '✨, +' + d.earned_coins + '💰');
+        } else {
+            alert('❌ Неверно. Правильный ответ: «' + currentSentence.correct + '»');
+        }
+        updateStats(); startSentence();
+    });
+}
+
+function startPhrases() {
+    fetch('/get_phrase').then(r => r.json()).then(d => {
+        var area = document.getElementById('phrasesArea');
+        area.innerHTML = '<div class="phrase-card"><span class="phrase-cat">' + d.cat + '</span><h2 style="color: var(--accent); font-size: 36px; margin-top: 10px;">' + d.en + '</h2><p style="font-size: 24px; color: var(--text-muted); margin-top: 15px;">' + d.ru + '</p></div><button onclick="startPhrases()" style="margin-top: 20px;">Следующая фраза</button>';
+    });
+}
+
+function renderPass() {
+    fetch('/get_stats').then(r => r.json()).then(d => {
+        var area = document.getElementById('passArea');
+        var html = '';
+        for (var lvl = 2; lvl <= 40; lvl++) {
+            var isClaimed = d.pass_claimed.includes(String(lvl));
+            var canClaim = d.level >= lvl && !isClaimed;
+            
+            var rewardName = 'Монеты';
+            if (lvl % 10 === 0) rewardName = 'Рамка ' + (lvl/10);
+            else if (lvl % 5 === 0) rewardName = 'Скин ' + (lvl/5);
+            
+            var coinReward = lvl * 50;
+            var text = rewardName !== 'Монеты' ? rewardName + '<br>+' + coinReward + '💰' : '+' + coinReward + '💰';
+
+            html += '<div class="pass-card ' + (d.level >= lvl ? 'unlocked' : 'locked') + '"><div class="pass-level">Ур. ' + lvl + '</div><div class="pass-reward" style="font-size:14px; line-height:1.4;">' + text + '</div><button onclick="claimPass(' + lvl + ')" ' + (canClaim ? '' : 'disabled') + '>' + (isClaimed ? 'Получено' : 'Забрать') + '</button></div>';
+        }
+        area.innerHTML = html;
+    });
+}
+
+function claimPass(level) {
+    fetch('/claim_pass', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({level: level})
+    }).then(r => r.json()).then(d => {
+        alert(d.message);
+        if (d.status === 'ok') { confetti({ particleCount: 150, spread: 90 }); updateStats(); renderPass(); }
+    });
+}
+
+var NFT_ITEMS = [
+    { id: 'owl', name: 'Мудрая Сова', price: 500, cls: 'g-owl' }, { id: 'cat', name: 'Космо-Кот', price: 700, cls: 'g-cat' },
+    { id: 'crown', name: 'Корона', price: 1000, cls: 'g-crown' }, { id: 'rocket', name: 'Ракета', price: 1500, cls: 'g-rocket' },
+    { id: 'diamond', name: 'Алмаз', price: 3000, cls: 'g-diamond' }, { id: 'heart', name: 'Сердце', price: 2000, cls: 'g-heart' },
+    { id: 'star', name: 'Звезда', price: 2500, cls: 'g-star' }, { id: 'ghost', name: 'Призрак', price: 4000, cls: 'g-ghost' }
+];
+
+function renderShop() {
+    var grid = document.getElementById('nftGrid');
+    grid.innerHTML = '';
+    NFT_ITEMS.forEach(item => {
+        var card = document.createElement('div'); card.className = 'nft-item';
+        card.innerHTML = '<div class="gift-scene ' + item.cls + '"><div class="gift-body"><div class="gift-eye left"></div><div class="gift-eye right"></div><div class="gift-detail"></div></div><div class="gift-spark s1"></div><div class="gift-spark s2"></div><div class="gift-spark s3"></div></div><div class="nft-name">' + item.name + '</div><div class="nft-price">' + item.price + '💰</div><button onclick="buyNft(\'' + item.id + '\')">Купить</button>';
+        grid.appendChild(card);
+    });
+}
+
+function buyNft(id) {
+    fetch('/buy_nft', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({nft_id: id})
+    }).then(r => r.json()).then(d => {
+        alert(d.message);
+        if (d.status === 'ok') { confetti({ particleCount: 120, spread: 80 }); updateStats(); }
+    });
+}
+
+function updateStats() {
+    fetch('/get_stats').then(r => r.json()).then(d => {
+        document.getElementById('userLevel').textContent = 'Ур. ' + d.level;
+        document.getElementById('userExp').textContent = '✨ ' + d.exp;
+        document.getElementById('userCoins').textContent = '💰 ' + d.coins;
+    });
+}
+
+function loadLeaderboard() {
+    fetch('/leaderboard').then(r => r.json()).then(data => {
+        var html = '';
+        data.forEach((u, i) => {
+            var medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : (i+1) + '.';
+            var giftHtml = u.gift ? '<span class="mini-gift g-' + u.gift + '"></span>' : '';
+            html += '<div class="stat-card" style="text-align:left;display:flex;justify-content:space-between; align-items:center; padding: 20px 30px;"><div style="display:flex; align-items:center; gap:10px;"><span>' + medal + ' ' + u.name + '</span>' + giftHtml + '</div><span>✨ ' + u.exp + ' | Ур. ' + u.level + '</span></div>';
+        });
+        document.getElementById('leaderArea').innerHTML = html || '<p style="text-align:center;color:#666;">Пока никого нет</p>';
+    });
+}
+</script>
+</body>
+</html>
