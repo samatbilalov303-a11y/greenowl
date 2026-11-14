@@ -10,16 +10,29 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# ТВОЙ КЛЮЧ (ОБЯЗАТЕЛЬНО ПЕРЕВЫПУСТИ ЕГО ПОСЛЕ ЭТОГО!)
-HARDCODED_KEY = "MDFhMWM2MTAtNjU3NS03MGU1LWFiMjUtNTY5MmMxZGYwODM1OmJjOTg3ZTljLWJjYjQtNDljMS1hODk5LWU3NDJkZTE1YjNiYw=="
+# ============================================================
+# ВСТАВЬ СВОЙ КЛЮЧ GIGACHAT (ОБЯЗАТЕЛЬНО ПЕРЕВЫПУСТИ ЕГО!)
+# ============================================================
+HARDCODED_KEY = "MDFhMWM2MTAtNjU3NS03MGU1LWFiMjUtNTY5MmMxZGYwODM1OmY1YzEwNjcyLWE4YmQtNGVjNS1iODUwLTNjNjY1ODlmZTg3Mg=="
+# ============================================================
+
 app = Flask(__name__)
-app.secret_key = "greenowl_secret_key_2026"
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/greenowl.db'
+app.secret_key = "greenowl_secret_key_super_secure_2026"
+
+# --- ИСПРАВЛЕНИЕ БАЗЫ ДАННЫХ (ДЛЯ WINDOWS И RENDER) ---
+if os.name == 'nt':
+    # Для Windows (твой компьютер)
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///greenowl.db'
+else:
+    # Для Render (Linux)
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/greenowl.db'
+
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SESSION_COOKIE_HTTPONLY'] = True
 app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
 
 db = SQLAlchemy(app)
+logging.basicConfig(level=logging.INFO)
 
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -38,6 +51,7 @@ try:
 except Exception as e:
     client = None
 
+# --- СЛОВАРИ ---
 EASY_WORDS = {'food': [('apple', 'яблоко'), ('water', 'вода'), ('tea', 'чай'), ('milk', 'молоко'), ('fish', 'рыба'), ('cheese', 'сыр'), ('bread', 'хлеб')], 'animals': [('cat', 'кот'), ('dog', 'собака'), ('bird', 'птица'), ('fox', 'лиса')]}
 MEDIUM_WORDS = {'food': [('meat', 'мясо'), ('coffee', 'кофе'), ('pineapple', 'ананас')], 'animals': [('horse', 'лошадь'), ('bear', 'медведь'), ('wolf', 'волк')]}
 HARD_WORDS = {'food': [('refrigerator', 'холодильник'), ('ingredients', 'ингредиенты')], 'animals': [('kangaroo', 'кенгуру'), ('butterfly', 'бабочка'), ('crocodile', 'крокодил')]}
@@ -69,6 +83,8 @@ PHRASES = [
     {'en': 'What is your name?', 'ru': 'Как тебя зовут?', 'cat': 'Приветствия'},
     {'en': 'Can I have the menu, please?', 'ru': 'Можно мне меню?', 'cat': 'В кафе'},
     {'en': 'How much does it cost?', 'ru': 'Сколько это стоит?', 'cat': 'В кафе'},
+    {'en': 'Where is the nearest station?', 'ru': 'Где ближайшая станция?', 'cat': 'Путешествия'},
+    {'en': 'What is the Wi-Fi password?', 'ru': 'Какой пароль от Wi-Fi?', 'cat': 'Технологии'},
 ]
 
 NFT_PRICES = {'owl': 500, 'cat': 700, 'crown': 1000, 'rocket': 1500, 'diamond': 3000, 'heart': 2000, 'star': 2500, 'ghost': 4000}
@@ -113,34 +129,16 @@ def logout():
     session.pop('username', None)
     return jsonify({'status': 'ok'})
 
-import json
-
 @app.route('/ask', methods=['POST'])
 def ask():
     if not client: return jsonify({'reply': '⚠️ GigaChat не инициализирован.'})
     try:
         word = (request.get_json() or {}).get('message', '').strip()
-        
-        # ПРОСИМ ИИ ВЫДАТЬ СТРОГО JSON (это исключает любой лишний текст)
-        prompt = f"Ты англо-русский словарь. Пользователь ввел слово: '{word}'. Ответь строго в формате JSON без лишних символов: {{\"translation\": \"перевод на русский\", \"sentence\": \"одно короткое предложение на английском с этим словом\"}}"
-        
+        prompt = f"Ты словарь. Пользователь ввел слово: '{word}'. Выдай строго: \nПеревод: [перевод на русский]\nПредложение: [одно короткое предложение на английском с этим словом]"
         chat = Chat(messages=[Messages(role=MessagesRole.USER, content=prompt)])
-        reply_text = client.chat(chat).choices[0].message.content
-        
-        # Очищаем ответ от возможных маркеров Markdown (```json ... ```)
-        reply_text = reply_text.replace("```json", "").replace("```", "").strip()
-        
-        # Парсим JSON
-        data = json.loads(reply_text)
-        translation = data.get('translation', 'Перевод не найден')
-        sentence = data.get('sentence', 'Предложение не найдено')
-        
-        # Форматируем красивый ответ
-        formatted_reply = f"<b>Перевод:</b> {translation}<br><br><b>Предложение:</b> {sentence}"
-        return jsonify({'reply': formatted_reply})
-        
-    except Exception as e:
-        return jsonify({'reply': f'⚠️ Ошибка: {str(e)}'})
+        return jsonify({'reply': client.chat(chat).choices[0].message.content})
+    except Exception as e: return jsonify({'reply': f'⚠️ Ошибка: {str(e)}'})
+
 @app.route('/get_stats')
 def get_stats():
     user = get_user()
